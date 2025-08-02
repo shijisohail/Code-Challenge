@@ -63,3 +63,42 @@ async def receive_animals(animals: List[Dict[str, Any]]):
         logger.error(f"Error processing animals: {e}")
         raise HTTPException(status_code=500, detail=f"Error processing animals: {str(e)}")
 
+
+@app.post("/process-all-animals")
+async def process_all_animals():
+    try:
+        logger.info("Starting to process all animals")
+
+        animal_ids = await get_all_animal_ids(ANIMALS_API_BASE_URL)
+        if not animal_ids:
+            return {
+                "message": "No animals found",
+                "total_animals": 0,
+                "batches_sent": 0,
+                "failed_animals": 0
+            }
+
+        transformed_animals = await fetch_and_transform_animals(ANIMALS_API_BASE_URL, animal_ids)
+
+        batches = chunk_list(transformed_animals, 100)
+        batches_sent = 0
+        failed_animals = len(animal_ids) - len(transformed_animals)
+
+        async with aiohttp.ClientSession() as session:
+            for batch in batches:
+                success = await post_batch_with_retry(session, ANIMALS_API_BASE_URL, batch)
+                if success:
+                    batches_sent += 1
+                else:
+                    failed_animals += len(batch)
+
+        return {
+            "message": "Processing complete",
+            "total_animals": len(animal_ids),
+            "batches_sent": batches_sent,
+            "failed_animals": failed_animals
+        }
+
+    except Exception as e:
+        logger.error(f"Error in process_all_animals: {e}")
+        raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
