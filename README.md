@@ -1,4 +1,4 @@
-# Animal API
+# ETL Animal API
 
 A comprehensive FastAPI application designed to process and manage animal data with robust error handling, concurrency support, and production-ready features. This application serves as both a proxy API for external animal services and a data processing pipeline with transformation capabilities.
 
