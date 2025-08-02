@@ -1,99 +1,148 @@
 import asyncio
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import aiohttp
 
 logger = logging.getLogger(__name__)
 
 
-def transform_animal(animal: Dict[str, Any]) -> Dict[str, Any]:
-    transformed = animal.copy()
-    if "friends" in transformed and transformed["friends"]:
-        if isinstance(transformed["friends"], str):
-            transformed["friends"] = [
-                friend.strip()
-                for friend in transformed["friends"].split(",")
-                if friend.strip()
-            ]
-    else:
-        transformed["friends"] = []
+def _transform_friends(friends: Any) -> List[str]:
+    """Transform friends field to a list of strings."""
+    if not friends:
+        return []
 
-    if "born_at" in transformed and transformed["born_at"] is not None:
+    if isinstance(friends, str):
+        return [friend.strip() for friend in friends.split(",") if friend.strip()]
+    return []
+
+
+def _parse_datetime_string(born_at: str) -> Optional[str]:
+    """Parse datetime string using common formats."""
+    formats = [
+        "%Y-%m-%d",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%dT%H:%M:%SZ",
+    ]
+
+    for fmt in formats:
         try:
-            born_at = transformed["born_at"]
-            if isinstance(born_at, (int, float)):
-                dt = datetime.utcfromtimestamp(born_at / 1000.0)
-                transformed["born_at"] = dt.isoformat() + "Z"
-            elif isinstance(born_at, str):
-                # Try common datetime formats
-                formats = [
-                    "%Y-%m-%d",
-                    "%Y-%m-%d %H:%M:%S",
-                    "%Y-%m-%dT%H:%M:%S",
-                    "%Y-%m-%dT%H:%M:%SZ",
-                ]
-                for fmt in formats:
-                    try:
-                        dt = datetime.strptime(born_at, fmt)
-                        transformed["born_at"] = dt.isoformat() + "Z"
-                        break
-                    except ValueError:
-                        continue
-                else:
-                    logger.warning(f"Could not parse born_at: {born_at}")
-                    transformed["born_at"] = None
-        except Exception as e:
-            logger.warning(f"Error transforming born_at: {e}")
-            transformed["born_at"] = None
+            dt = datetime.strptime(born_at, fmt)
+            return dt.isoformat() + "Z"
+        except ValueError:
+            continue
+
+    logger.warning(f"Could not parse born_at: {born_at}")
+    return None
+
+
+def _transform_born_at(born_at: Any) -> Optional[str]:
+    """Transform born_at field to ISO format."""
+    if born_at is None:
+        return None
+
+    try:
+        if isinstance(born_at, (int, float)):
+            dt = datetime.utcfromtimestamp(born_at / 1000.0)
+            return dt.isoformat() + "Z"
+        elif isinstance(born_at, str):
+            return _parse_datetime_string(born_at)
+    except Exception as e:
+        logger.warning(f"Error transforming born_at: {e}")
+
+    return None
+
+
+def transform_animal(animal: Dict[str, Any]) -> Dict[str, Any]:
+    """Transform animal data with normalized friends and born_at fields."""
+    transformed = animal.copy()
+
+    # Transform friends field
+    transformed["friends"] = _transform_friends(transformed.get("friends"))
+
+    # Transform born_at field
+    if "born_at" in transformed:
+        transformed["born_at"] = _transform_born_at(transformed["born_at"])
 
     return transformed
+
+
+async def _handle_http_response(
+    response: aiohttp.ClientResponse, url: str, attempt: int, max_retries: int
+) -> Tuple[Optional[Dict], bool]:
+    """Handle HTTP response and return (result, should_continue)."""
+    if response.status == 200:
+        return await response.json(), False
+
+    if response.status == 404:
+        return None, False
+
+    if response.status in [500, 502, 503, 504]:
+        wait_time = min(2**attempt, 16)  # Cap at 16 seconds
+        logger.warning(
+            f"Server error {response.status} for {url}, "
+            f"attempt {attempt + 1}/{max_retries}, "
+            f"waiting {wait_time}s"
+        )
+        if attempt < max_retries - 1:
+            await asyncio.sleep(wait_time)
+        return None, True
+
+    logger.error(f"Unexpected status {response.status} for {url}")
+    return None, False
+
+
+async def _handle_timeout_error(url: str, attempt: int, max_retries: int) -> bool:
+    """Handle timeout error and return should_continue."""
+    wait_time = min(3 + attempt * 2, 10)
+    logger.warning(
+        f"Timeout for {url} (server may be pausing), "
+        f"attempt {attempt + 1}/{max_retries}, "
+        f"waiting {wait_time}s"
+    )
+    if attempt < max_retries - 1:
+        await asyncio.sleep(wait_time)
+    return True
+
+
+async def _handle_client_error(
+    url: str, error: aiohttp.ClientError, attempt: int, max_retries: int
+) -> bool:
+    """Handle client error and return should_continue."""
+    logger.warning(
+        f"Connection error for {url}: {error}, " f"attempt {attempt + 1}/{max_retries}"
+    )
+    if attempt < max_retries - 1:
+        await asyncio.sleep(2**attempt)
+    return True
 
 
 async def fetch_with_retry(
     session: aiohttp.ClientSession, url: str, max_retries: int = 5
 ) -> Optional[Dict]:
+    """Fetch URL with retry logic for handling various error conditions."""
+    timeout = aiohttp.ClientTimeout(total=20, connect=5)
+
     for attempt in range(max_retries):
         try:
-            timeout = aiohttp.ClientTimeout(total=20, connect=5)
-
             async with session.get(url, timeout=timeout) as response:
-                if response.status == 200:
-                    return await response.json()
-                if response.status == 404:
-                    return None
-                if response.status in [500, 502, 503, 504]:
-                    wait_time = min(2**attempt, 16)  # Cap at 16 seconds
-                    logger.warning(
-                        f"Server error {response.status} for {url}, "
-                        f"attempt {attempt + 1}/{max_retries}, "
-                        f"waiting {wait_time}s"
-                    )
-                    if attempt < max_retries - 1:
-                        await asyncio.sleep(wait_time)
-                    continue
-                logger.error(f"Unexpected status {response.status} for {url}")
-                return None
+                result, should_continue = await _handle_http_response(
+                    response, url, attempt, max_retries
+                )
+                if not should_continue:
+                    return result
 
         except asyncio.TimeoutError:
-            # Progressive wait for timeouts
-            wait_time = min(3 + attempt * 2, 10)
-            logger.warning(
-                f"Timeout for {url} (server may be pausing), "
-                f"attempt {attempt + 1}/{max_retries}, "
-                f"waiting {wait_time}s"
-            )
-            if attempt < max_retries - 1:
-                await asyncio.sleep(wait_time)
+            should_continue = await _handle_timeout_error(url, attempt, max_retries)
+            if not should_continue:
+                break
 
         except aiohttp.ClientError as e:
-            logger.warning(
-                f"Connection error for {url}: {e}, "
-                f"attempt {attempt + 1}/{max_retries}"
-            )
-            if attempt < max_retries - 1:
-                await asyncio.sleep(2**attempt)
+            should_continue = await _handle_client_error(url, e, attempt, max_retries)
+            if not should_continue:
+                break
 
         except Exception as e:
             logger.error(f"Unexpected error for {url}: {e}")
@@ -151,8 +200,8 @@ async def fetch_and_transform_animals(
         for i in range(0, len(animal_ids), batch_size):
             batch_ids = animal_ids[i : i + batch_size]
             logger.info(
-                f"Processing batch {i//batch_size + 1}: "
-                f"animals {i+1}-{min(i+batch_size, len(animal_ids))}"
+                f"Processing batch {i // batch_size + 1}: "
+                f"animals {i + 1}-{min(i + batch_size, len(animal_ids))}"
             )
 
             # Create tasks for this batch
@@ -166,7 +215,7 @@ async def fetch_and_transform_animals(
                 if isinstance(result, Exception):
                     logger.error(f"Exception fetching animal {animal_id}: {result}")
                     failed_animals.append(animal_id)
-                elif result is not None:
+                elif result is not None and isinstance(result, dict):
                     transformed_animals.append(result)
                 else:
                     failed_animals.append(animal_id)

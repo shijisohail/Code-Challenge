@@ -20,9 +20,6 @@ help:
 install:
 	pip install -r requirements.txt
 
-install-dev:
-	pip install -r requirements-dev.txt
-	pip install -e .
 
 setup-dev: install-dev pre-commit
 	@echo "Development environment setup complete!"
