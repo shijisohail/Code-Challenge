@@ -51,7 +51,7 @@ jobs:
           black --diff --check .
           isort --check-only .
           mypy .
-          ruff .
+          flake8 .
           bandit -r . || true
 
       - name: Run tests

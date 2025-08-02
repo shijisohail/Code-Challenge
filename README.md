@@ -28,7 +28,7 @@ A FastAPI application to process and manage animal data with robust error handli
 
 ## 🛠️ Development
 - **Testing**: Run `pytest` for unit tests
-- **Linting**: Use `black`, `isort`, and `ruff` for code style
+- **Linting**: Use `black`, `isort`, and `flake8` for code style
 - **CI/CD**: Configured GitHub Actions for automated testing and deployment
 
 ## ⚖️ License

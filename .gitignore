@@ -59,7 +59,7 @@ htmlcov/
 .tox/
 .cache
 .mypy_cache/
-.ruff_cache/
+.flake8_cache/
 
 # Logs
 *.log

@@ -23,12 +23,12 @@ repos:
       - id: isort
         args: ["--profile", "black", "--settings-path", "pyproject.toml"]
 
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.1.6
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.1.0
     hooks:
-      - id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
-        types_or: [python, pyi, jupyter]
+      - id: flake8
+        args: [--config=pyproject.toml]
+        additional_dependencies: [flake8-docstrings, flake8-bugbear]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.8.0
