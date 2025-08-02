@@ -1,6 +1,7 @@
 """
 Combined tests for the Animal API with proper async mocking
 """
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
@@ -36,7 +37,7 @@ class TestReceiveAnimalsEndpoint:
         """Test successful receipt of animals"""
         animals_data = [
             {"id": 1, "name": "Fluffy", "type": "cat"},
-            {"id": 2, "name": "Buddy", "type": "dog"}
+            {"id": 2, "name": "Buddy", "type": "dog"},
         ]
 
         response = client.post("/animals/v1/home", json=animals_data)
@@ -73,13 +74,13 @@ class TestExternalAPIEndpoints:
         mock_data = {
             "items": [
                 {"id": 1, "name": "Fluffy", "type": "cat"},
-                {"id": 2, "name": "Buddy", "type": "dog"}
+                {"id": 2, "name": "Buddy", "type": "dog"},
             ],
             "page": 1,
-            "total": 2
+            "total": 2,
         }
 
-        with patch('main.aiohttp.ClientSession') as mock_session:
+        with patch("main.aiohttp.ClientSession") as mock_session:
             # Create mock response
             mock_response = MagicMock()
             mock_response.status = 200
@@ -103,7 +104,7 @@ class TestExternalAPIEndpoints:
 
     def test_get_animals_api_error(self, client):
         """Test animals endpoint when external API returns error"""
-        with patch('main.aiohttp.ClientSession') as mock_session:
+        with patch("main.aiohttp.ClientSession") as mock_session:
             # Create mock response with error status
             mock_response = MagicMock()
             mock_response.status = 500
@@ -126,7 +127,7 @@ class TestExternalAPIEndpoints:
 
     def test_get_animal_details_not_found(self, client):
         """Test animal details endpoint when animal not found"""
-        with patch('main.aiohttp.ClientSession') as mock_session:
+        with patch("main.aiohttp.ClientSession") as mock_session:
             # Create mock response with 404 status
             mock_response = MagicMock()
             mock_response.status = 404
@@ -149,7 +150,7 @@ class TestExternalAPIEndpoints:
 
     def test_process_all_animals_no_animals(self, client):
         """Test processing when no animals found"""
-        with patch('main.get_all_animal_ids') as mock_get_ids:
+        with patch("main.get_all_animal_ids") as mock_get_ids:
             mock_get_ids.return_value = []
 
             response = client.post("/process-all-animals")
@@ -170,7 +171,7 @@ class TestUtilityFunctions:
             "id": 1,
             "name": "Fluffy",
             "friends": "Buddy, Max, Luna",
-            "born_at": 1640995200000
+            "born_at": 1640995200000,
         }
 
         result = transform_animal(animal)
@@ -202,11 +203,7 @@ class TestUtilityFunctions:
         """Test transformation with string date"""
         from utils import transform_animal
 
-        animal = {
-            "id": 1,
-            "name": "Fluffy",
-            "born_at": "2022-01-01"
-        }
+        animal = {"id": 1, "name": "Fluffy", "born_at": "2022-01-01"}
 
         result = transform_animal(animal)
 
@@ -216,11 +213,7 @@ class TestUtilityFunctions:
         """Test transformation with invalid date"""
         from utils import transform_animal
 
-        animal = {
-            "id": 1,
-            "name": "Fluffy",
-            "born_at": "invalid-date"
-        }
+        animal = {"id": 1, "name": "Fluffy", "born_at": "invalid-date"}
 
         result = transform_animal(animal)
 
@@ -230,11 +223,7 @@ class TestUtilityFunctions:
         """Test transformation with None born_at"""
         from utils import transform_animal
 
-        animal = {
-            "id": 1,
-            "name": "Fluffy",
-            "born_at": None
-        }
+        animal = {"id": 1, "name": "Fluffy", "born_at": None}
 
         result = transform_animal(animal)
 
@@ -248,7 +237,7 @@ class TestUtilityFunctions:
         url = "http://test/api/data"
         mock_data = {"key": "value"}
 
-        with patch('aiohttp.ClientSession.get') as mock_get:
+        with patch("aiohttp.ClientSession.get") as mock_get:
             mock_response = AsyncMock()
             mock_response.status = 200
             mock_response.json.return_value = mock_data
@@ -266,7 +255,7 @@ class TestUtilityFunctions:
 
         url = "http://test/api/data"
 
-        with patch('aiohttp.ClientSession.get') as mock_get:
+        with patch("aiohttp.ClientSession.get") as mock_get:
             mock_response = AsyncMock()
             mock_response.status = 404
             mock_get.return_value.__aenter__.return_value = mock_response
@@ -282,16 +271,14 @@ class TestUtilityFunctions:
         from utils import get_all_animal_ids
 
         base_url = "http://test"
-        mock_data_page_1 = {
-            "items": [{"id": 1}, {"id": 2}],
-            "page": 1
-        }
+        mock_data_page_1 = {"items": [{"id": 1}, {"id": 2}], "page": 1}
 
-        mock_data_page_2 = {"items": [], "page": 2}  # Empty list to end pagination
+        # Empty list to end pagination
+        mock_data_page_2 = {"items": [], "page": 2}
 
-        with patch('utils.fetch_with_retry') as mock_fetch:
+        with patch("utils.fetch_with_retry") as fetch_mock:
             # Simulate fetching two pages
-            mock_fetch.side_effect = [mock_data_page_1, mock_data_page_2]
+            fetch_mock.side_effect = [mock_data_page_1, mock_data_page_2]
 
             result = await get_all_animal_ids(base_url)
 
