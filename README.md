@@ -1,29 +1,35 @@
-# Animal Processing API
+# Animal API
 
-A robust FastAPI application that processes animal data with retry logic and error handling.
+A FastAPI application to process and manage animal data with robust error handling and concurrency support.
 
-## Setup
+## 🚀 Quick Start
 
-```bash
-pip install -r requirements.txt
-```
+1. **Install Dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-## Run
+2. **Run the Server**
+   ```bash
+   python run_server.py
+   ```
 
-```bash
-python run_server.py
-```
+## 📖 API Overview
+- **Health Check**: `GET /health` - Verify service health
+- **List Animals**: `GET /animals` - List animals with pagination
+- **Animal Details**: `GET /animals/{animal_id}` - Fetch specific animal details
+- **Receive Animals**: `POST /animals/v1/home` - Receive animal batches (max 100)
+- **Process All**: `POST /process-all-animals` - Process all available animals
 
-## API Endpoints
+## ✨ Features
+- **Resilient Networking**: Handles 500/502/503/504 errors with retries
+- **Efficient Processing**: Supports concurrent requests with rate limits
+- **Data Transformation**: Converts timestamps and formats friend lists
 
-- `GET /animals` - List animals with pagination
-- `GET /animals/{animal_id}` - Get specific animal details  
-- `POST /animals/v1/home` - Receive transformed animal batches (max 100)
-- `POST /process-all-animals` - Process all animals from external API
+## 🛠️ Development
+- **Testing**: Run `pytest` for unit tests
+- **Linting**: Use `black`, `isort`, and `ruff` for code style
+- **CI/CD**: Configured GitHub Actions for automated testing and deployment
 
-## Features
-
-- Handles server errors (500, 502, 503, 504) with exponential backoff
-- Manages server pauses (5-15 seconds) with extended timeouts
-- Concurrent processing with rate limiting
-- Automatic data transformation (friends arrays, ISO8601 timestamps)
+## ⚖️ License
+This project is licensed under the MIT License.
