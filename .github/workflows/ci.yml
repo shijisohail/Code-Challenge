@@ -5,6 +5,7 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
+  workflow_dispatch:
 
 jobs:
   setup:
@@ -69,4 +70,3 @@ jobs:
         run: |
           python -m build
           echo 'Build complete!'
-
