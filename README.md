@@ -381,11 +381,11 @@ async def fetch_and_transform_animals(base_url, animal_ids, max_concurrent=10):
 
 **Examples**:
 ```python
-# main.py:38-53
+# main.py
 async def get_animals(page: Optional[int] = 1) -> Dict[str, Any]:
     """Retrieve paginated list of animals from external service."""
 
-# utils.py:122-152
+# utils.py
 async def fetch_with_retry(
     session: aiohttp.ClientSession,
     url: str,
@@ -393,7 +393,7 @@ async def fetch_with_retry(
 ) -> Optional[Dict]:
     """Fetch URL with retry logic for handling various error conditions."""
 
-# utils.py:58-69
+# utils.py
 def transform_animal(animal: Dict[str, Any]) -> Dict[str, Any]:
     """Transform animal data with normalized friends and born_at fields."""
 ```
@@ -415,7 +415,7 @@ def transform_animal(animal: Dict[str, Any]) -> Dict[str, Any]:
 
 **Error Handling Patterns**:
 ```python
-# utils.py:72-108
+# utils.py
 async def _handle_http_response(response, url, attempt, max_retries):
     if response.status == 200:
         return await response.json(), False
@@ -427,7 +427,7 @@ async def _handle_http_response(response, url, attempt, max_retries):
         await asyncio.sleep(wait_time)
         return None, True
 
-# main.py:40-53
+# main.py
 try:
     async with aiohttp.ClientSession() as session:
         # API call logic
@@ -455,14 +455,14 @@ except Exception as e:
 
 **Test Structure**:
 ```python
-# test_file.py:20-31
+# test_file.py
 class TestHealthEndpoint:
     def test_health_check(self, client):
         response = client.get("/health")
         assert response.status_code == 200
         assert data["status"] == "healthy"
 
-# test_file.py:233-251
+# test_file.py
 class TestUtilityFunctions:
     async def test_fetch_with_retry_successful(self):
         # Mock HTTP responses
@@ -500,12 +500,12 @@ open htmlcov/index.html
 
 **Tool Configuration**:
 ```toml
-# pyproject.toml:36-54 - Black Configuration
+# pyproject.toml: - Black Configuration
 [tool.black]
 line-length = 88
 target-version = ['py38', 'py39', 'py310', 'py311']
 
-# pyproject.toml:56-70 - isort Configuration
+# pyproject.toml: - isort Configuration
 [tool.isort]
 profile = "black"
 multi_line_output = 3
@@ -543,12 +543,12 @@ make ci
 
 **Pipeline Structure**:
 ```yaml
-# .github/workflows/ci.yml:10-36
+# .github/workflows/ci.yml:
 jobs:
   setup:
     strategy:
       matrix:
-        python-version: [3.8, 3.9, "3.10", "3.11"]
+        python-version: ["3.11"]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -590,19 +590,13 @@ Each best practice is deeply integrated into the project:
 
 | Practice | Primary Location | Key Benefit |
 |----------|------------------|-------------|
-| **Parallelism** | `utils.py:177-241` | Efficient processing of large datasets |
+| **Parallelism** | `utils.py` | Efficient processing of large datasets |
 | **Type Safety** | Throughout codebase | Catch errors at development time |
 | **Error Handling** | `main.py`, `utils.py` | Robust, fault-tolerant application |
 | **Unit Testing** | `test_file.py` | Reliable, maintainable code |
 | **Code Quality** | `pyproject.toml`, `.flake8` | Consistent, readable codebase |
 | **CI/CD** | `.github/workflows/ci.yml` | Automated quality assurance |
 
-**Quality Metrics**:
-- **47.78% Test Coverage** (above 40% minimum)
-- **22 Comprehensive Tests** covering all functionality
-- **Zero Linting Errors** in application code
-- **100% Type Coverage** with mypy
-- **Automated Quality Gates** via pre-commit hooks
 
 This implementation demonstrates production-ready software engineering practices suitable for enterprise environments.
 
