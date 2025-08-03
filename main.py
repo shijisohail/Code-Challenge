@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import aiohttp
@@ -29,7 +30,7 @@ async def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "timestamp": "2024-01-01T00:00:00Z",
+        "timestamp": datetime.now().isoformat(),
         "version": "1.0.0",
         "service": "Animal API",
     }
