@@ -102,7 +102,7 @@ jobs:
             type=ref,event=branch
             type=ref,event=pr
             type=sha,prefix=${{ github.run_number }}-
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
           flavor: |
             latest=auto
 
