@@ -4,7 +4,7 @@ HTTP client service with retry logic and error handling.
 
 import asyncio
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import aiohttp
 
@@ -64,7 +64,7 @@ async def _handle_client_error(
 
 
 async def fetch_with_retry(
-    session: aiohttp.ClientSession, url: str, max_retries: int = None
+    session: aiohttp.ClientSession, url: str, max_retries: Optional[int] = None
 ) -> Optional[Dict]:
     """Fetch URL with retry logic for handling various error conditions."""
     if max_retries is None:
@@ -101,11 +101,30 @@ async def fetch_with_retry(
     return None
 
 
+async def _handle_post_response(
+    response: aiohttp.ClientResponse, attempt: int, max_retries: int
+) -> Tuple[bool, bool]:  # (success, should_continue)
+    """Handle HTTP response for POST requests."""
+    if response.status in [200, 201, 202]:
+        return True, False
+
+    if response.status in [500, 502, 503, 504]:
+        logger.warning(
+            f"Server error {response.status}, " f"attempt {attempt + 1}/{max_retries}"
+        )
+        if attempt < max_retries - 1:
+            await asyncio.sleep(config.INITIAL_RETRY_DELAY**attempt)
+        return False, True
+
+    logger.error(f"Failed to send batch: {response.status}")
+    return False, False
+
+
 async def post_batch_with_retry(
     session: aiohttp.ClientSession,
     base_url: str,
     animals: List[Dict],
-    max_retries: int = None,
+    max_retries: Optional[int] = None,
 ) -> bool:
     """Post animal batch with retry logic."""
     if max_retries is None:
@@ -121,19 +140,15 @@ async def post_batch_with_retry(
                 timeout=aiohttp.ClientTimeout(total=config.BATCH_POST_TIMEOUT),
                 headers={"Content-Type": "application/json"},
             ) as response:
-                if response.status in [200, 201, 202]:
+                success, should_continue = await _handle_post_response(
+                    response, attempt, max_retries
+                )
+                if success:
                     logger.info(f"Successfully sent batch of {len(animals)} animals")
                     return True
-                if response.status in [500, 502, 503, 504]:
-                    logger.warning(
-                        f"Server error {response.status}, "
-                        f"attempt {attempt + 1}/{max_retries}"
-                    )
-                    if attempt < max_retries - 1:
-                        await asyncio.sleep(config.INITIAL_RETRY_DELAY**attempt)
-                    continue
-                logger.error(f"Failed to send batch: {response.status}")
-                return False
+                if not should_continue:
+                    return False
+
         except asyncio.TimeoutError:
             logger.warning(
                 f"Timeout sending batch, attempt {attempt + 1}/{max_retries}"

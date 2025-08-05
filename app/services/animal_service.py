@@ -42,7 +42,7 @@ async def fetch_and_transform_animals_with_session(
     session: aiohttp.ClientSession,
     base_url: str,
     animal_ids: List[int],
-    max_concurrent: int = None,
+    max_concurrent: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
     """Fetch and transform animals concurrently using provided session."""
     if max_concurrent is None:
@@ -96,9 +96,11 @@ async def fetch_and_transform_animals_with_session(
 
 
 async def fetch_and_transform_animals(
-    base_url: str, animal_ids: List[int], max_concurrent: int = None
+    base_url: str, animal_ids: List[int], max_concurrent: Optional[int] = None
 ) -> List[Dict[str, Any]]:
-    """Fetch and transform animals concurrently (legacy function for backward compatibility)."""
+    """Fetch and transform animals concurrently
+    (legacy function for backward compatibility).
+    """
     async with aiohttp.ClientSession(
         connector=aiohttp.TCPConnector(limit=50, limit_per_host=20)
     ) as session:
@@ -127,7 +129,8 @@ async def process_batch_etl(
         success = await post_batch_with_retry(session, base_url, transformed_animals)
         if success:
             logger.info(
-                f"Successfully processed ETL batch {batch_number}: {len(transformed_animals)} animals"
+                f"Successfully processed ETL batch {batch_number}: "
+                f"{len(transformed_animals)} animals"
             )
             return {
                 "batch_number": batch_number,
@@ -154,7 +157,9 @@ async def process_batch_etl(
 
 
 async def process_all_animals_batch(base_url: str) -> Dict[str, Any]:
-    """Process all animals following ETL principles: Extract batches -> Transform -> Load -> repeat."""
+    """Process all animals following ETL principles:
+    Extract batches -> Transform -> Load -> repeat.
+    """
     logger.info("Starting ETL processing of all animals")
 
     # Statistics tracking

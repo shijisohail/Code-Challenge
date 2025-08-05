@@ -167,6 +167,6 @@ class TestExternalAPIEndpoints:
         assert data["total_animals"] == 0
         assert data["processed_animals"] == 0
         assert data["batches_sent"] == 0
-        
+
         # Verify the mock was called
         mock_process.assert_called_once()

@@ -91,7 +91,8 @@ async def receive_animals(animals: List[Dict[str, Any]]):
 
 
 async def process_all_animals():
-    """Process all animals using ETL principles: Extract batches -> Transform -> Load -> repeat.
+    """Process all animals using ETL principles:
+    Extract batches -> Transform -> Load -> repeat.
 
     This endpoint follows proper ETL patterns by:
     1. Extracting animal IDs in pages from /animals/v1/animals

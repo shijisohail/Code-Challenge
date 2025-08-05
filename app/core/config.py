@@ -3,7 +3,6 @@ Application configuration settings.
 """
 
 import logging
-from typing import Optional
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
