@@ -113,7 +113,8 @@ jobs:
 
       - name: Test Docker image
         run: |
-          docker run --rm --name test-container -d -p 8000:8000 ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          IMAGE_NAME_LOWER=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+          docker run --rm --name test-container -d -p 8000:8000 ${{ env.REGISTRY }}/${IMAGE_NAME_LOWER}:latest
           sleep 10
           curl -f http://localhost:8000/health || exit 1
           docker stop test-container
@@ -124,10 +125,16 @@ jobs:
     needs: docker-build
     if: github.event_name != 'pull_request'
     steps:
+      - name: Set lowercase image name
+        id: image
+        run: |
+          IMAGE_NAME_LOWER=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+          echo "name=${IMAGE_NAME_LOWER}" >> $GITHUB_OUTPUT
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          image-ref: ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest
           format: 'sarif'
           output: 'trivy-results.sarif'
 
@@ -147,6 +154,7 @@ jobs:
 
       - name: Deploy notification
         run: |
+          IMAGE_NAME_LOWER=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
           echo "🚀 Deploying Animal API version ${{ github.sha }}"
-          echo "Docker image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
-          echo "Available at: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+          echo "Docker image: ${{ env.REGISTRY }}/${IMAGE_NAME_LOWER}:${{ github.sha }}"
+          echo "Available at: ${{ env.REGISTRY }}/${IMAGE_NAME_LOWER}:latest"
