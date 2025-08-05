@@ -1,6 +1,7 @@
 """
 Animal service containing business logic for animal operations.
 """
+
 import asyncio
 import logging
 from typing import Any, Dict, List, Optional
@@ -37,10 +38,13 @@ async def get_all_animal_ids(base_url: str) -> List[int]:
     return animal_ids
 
 
-async def fetch_and_transform_animals(
-    base_url: str, animal_ids: List[int], max_concurrent: int = None
+async def fetch_and_transform_animals_with_session(
+    session: aiohttp.ClientSession,
+    base_url: str,
+    animal_ids: List[int],
+    max_concurrent: int = None,
 ) -> List[Dict[str, Any]]:
-    """Fetch and transform animals concurrently."""
+    """Fetch and transform animals concurrently using provided session."""
     if max_concurrent is None:
         max_concurrent = config.MAX_CONCURRENT_REQUESTS
 
@@ -58,86 +62,167 @@ async def fetch_and_transform_animals(
             logger.warning(f"Failed to fetch animal {animal_id} after all retries")
             return None
 
-    async with aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(limit=50, limit_per_host=20)
-    ) as session:
-        # Process animals in batches to avoid overwhelming the server
-        batch_size = 50
+    # Create tasks for all animals in this batch
+    tasks = [fetch_single_animal(animal_id) for animal_id in animal_ids]
 
-        for i in range(0, len(animal_ids), batch_size):
-            batch_ids = animal_ids[i : i + batch_size]
-            logger.info(
-                f"Processing batch {i // batch_size + 1}: "
-                f"animals {i + 1}-{min(i + batch_size, len(animal_ids))}"
-            )
+    # Wait for all tasks to complete
+    results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            # Create tasks for this batch
-            tasks = [fetch_single_animal(animal_id) for animal_id in batch_ids]
-
-            # Wait for batch to complete
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-
-            # Process results
-            for animal_id, result in zip(batch_ids, results):
-                if isinstance(result, Exception):
-                    logger.error(f"Exception fetching animal {animal_id}: {result}")
-                    failed_animals.append(animal_id)
-                elif result is not None and isinstance(result, dict):
-                    transformed_animals.append(result)
-                else:
-                    failed_animals.append(animal_id)
-
-            # Small delay between batches to be server-friendly
-            if i + batch_size < len(animal_ids):
-                await asyncio.sleep(0.5)
+    # Process results
+    for animal_id, result in zip(animal_ids, results):
+        if isinstance(result, Exception):
+            logger.error(f"Exception fetching animal {animal_id}: {result}")
+            failed_animals.append(animal_id)
+        elif result is not None and isinstance(result, dict):
+            transformed_animals.append(result)
+        else:
+            failed_animals.append(animal_id)
 
     success_count = len(transformed_animals)
     failure_count = len(failed_animals)
 
     logger.info(
-        f"Animal processing complete: {success_count} successful, "
+        f"Batch processing complete: {success_count} successful, "
         f"{failure_count} failed"
     )
 
     if failed_animals:
         logger.warning(
-            f"Failed animal IDs: {failed_animals[:10]}"
+            f"Failed animal IDs in batch: {failed_animals[:10]}"
             f"{'...' if len(failed_animals) > 10 else ''}"
         )
 
     return transformed_animals
 
 
-async def process_all_animals_batch(base_url: str) -> Dict[str, Any]:
-    """Process all animals and send them in batches."""
-    logger.info("Starting to process all animals")
+async def fetch_and_transform_animals(
+    base_url: str, animal_ids: List[int], max_concurrent: int = None
+) -> List[Dict[str, Any]]:
+    """Fetch and transform animals concurrently (legacy function for backward compatibility)."""
+    async with aiohttp.ClientSession(
+        connector=aiohttp.TCPConnector(limit=50, limit_per_host=20)
+    ) as session:
+        return await fetch_and_transform_animals_with_session(
+            session, base_url, animal_ids, max_concurrent
+        )
 
-    animal_ids = await get_all_animal_ids(base_url)
-    if not animal_ids:
+
+async def process_batch_etl(
+    base_url: str,
+    animal_ids: List[int],
+    batch_number: int,
+    session: aiohttp.ClientSession,
+) -> Dict[str, Any]:
+    """Process a single batch following ETL principles: Extract -> Transform -> Load."""
+    batch_size = len(animal_ids)
+    logger.info(f"Processing ETL batch {batch_number}: {batch_size} animals")
+
+    # TRANSFORM: Fetch and transform this batch of animals in parallel
+    transformed_animals = await fetch_and_transform_animals_with_session(
+        session, base_url, animal_ids, max_concurrent=config.MAX_CONCURRENT_REQUESTS
+    )
+
+    # LOAD: Post the transformed batch
+    if transformed_animals:
+        success = await post_batch_with_retry(session, base_url, transformed_animals)
+        if success:
+            logger.info(
+                f"Successfully processed ETL batch {batch_number}: {len(transformed_animals)} animals"
+            )
+            return {
+                "batch_number": batch_number,
+                "processed": len(transformed_animals),
+                "failed": batch_size - len(transformed_animals),
+                "success": True,
+            }
+        else:
+            logger.error(f"Failed to post ETL batch {batch_number}")
+            return {
+                "batch_number": batch_number,
+                "processed": 0,
+                "failed": batch_size,
+                "success": False,
+            }
+    else:
+        logger.warning(f"No animals transformed in ETL batch {batch_number}")
         return {
-            "message": "No animals found",
-            "total_animals": 0,
-            "batches_sent": 0,
-            "failed_animals": 0,
+            "batch_number": batch_number,
+            "processed": 0,
+            "failed": batch_size,
+            "success": False,
         }
 
-    transformed_animals = await fetch_and_transform_animals(base_url, animal_ids)
 
-    batches = chunk_list(transformed_animals, config.MAX_ANIMALS_PER_BATCH)
+async def process_all_animals_batch(base_url: str) -> Dict[str, Any]:
+    """Process all animals following ETL principles: Extract batches -> Transform -> Load -> repeat."""
+    logger.info("Starting ETL processing of all animals")
+
+    # Statistics tracking
+    total_animals = 0
+    total_processed = 0
+    total_failed = 0
     batches_sent = 0
-    failed_animals = len(animal_ids) - len(transformed_animals)
+    batch_number = 0
 
-    async with aiohttp.ClientSession() as session:
-        for batch in batches:
-            success = await post_batch_with_retry(session, base_url, batch)
-            if success:
-                batches_sent += 1
-            else:
-                failed_animals += len(batch)
+    async with aiohttp.ClientSession(
+        connector=aiohttp.TCPConnector(limit=50, limit_per_host=20)
+    ) as session:
+        page = 1
+
+        while True:
+            # EXTRACT: Get next batch of animal IDs (up to MAX_ANIMALS_PER_BATCH)
+            logger.info(f"Extracting animals from page {page}")
+
+            url = f"{base_url}/animals/v1/animals?page={page}"
+            data = await fetch_with_retry(session, url)
+
+            if not data or "items" not in data or not data["items"]:
+                logger.info(
+                    f"No more animals found on page {page}. ETL processing complete."
+                )
+                break
+
+            page_animal_ids = [animal["id"] for animal in data["items"]]
+            total_animals += len(page_animal_ids)
+
+            logger.info(f"Extracted {len(page_animal_ids)} animal IDs from page {page}")
+
+            # Process page data in ETL batches of MAX_ANIMALS_PER_BATCH
+            batches = chunk_list(page_animal_ids, config.MAX_ANIMALS_PER_BATCH)
+
+            for batch_ids in batches:
+                batch_number += 1
+
+                # Process this batch: Extract (already done) -> Transform -> Load
+                batch_result = await process_batch_etl(
+                    base_url, batch_ids, batch_number, session
+                )
+
+                # Update statistics
+                total_processed += batch_result["processed"]
+                total_failed += batch_result["failed"]
+
+                if batch_result["success"]:
+                    batches_sent += 1
+
+                # Small delay between batches to be server-friendly
+                await asyncio.sleep(0.5)
+
+            page += 1
+
+            # Small delay between pages
+            await asyncio.sleep(0.2)
+
+    logger.info(
+        f"ETL processing complete: {total_processed} processed, "
+        f"{total_failed} failed, {batches_sent} batches sent successfully"
+    )
 
     return {
-        "message": "Processing complete",
-        "total_animals": len(animal_ids),
+        "message": "ETL processing complete",
+        "total_animals": total_animals,
+        "processed_animals": total_processed,
+        "failed_animals": total_failed,
         "batches_sent": batches_sent,
-        "failed_animals": failed_animals,
+        "total_batches": batch_number,
     }

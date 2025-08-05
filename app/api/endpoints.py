@@ -1,6 +1,7 @@
 """
 FastAPI endpoints for the Animal API.
 """
+
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -90,7 +91,17 @@ async def receive_animals(animals: List[Dict[str, Any]]):
 
 
 async def process_all_animals():
-    """Process all animals from the external API."""
+    """Process all animals using ETL principles: Extract batches -> Transform -> Load -> repeat.
+
+    This endpoint follows proper ETL patterns by:
+    1. Extracting animal IDs in pages from /animals/v1/animals
+    2. Processing each page in batches of MAX_ANIMALS_PER_BATCH (100)
+    3. For each batch: Transform animals in parallel using /animals/v1/animals/{id}
+    4. Load the transformed batch to /animals/v1/home
+    5. Repeat until all animals are processed
+
+    This approach ensures constant memory usage and better error isolation.
+    """
     try:
         return await process_all_animals_batch(config.ANIMALS_API_BASE_URL)
     except Exception as e:

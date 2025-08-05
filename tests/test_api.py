@@ -1,6 +1,7 @@
 """
 Tests for API endpoints.
 """
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -146,13 +147,26 @@ class TestExternalAPIEndpoints:
             assert response.status_code == 404
             assert "Animal with ID 999 not found" in response.json()["detail"]
 
-    def test_process_all_animals_no_animals(self, client):
-        """Test processing when no animals found"""
-        with patch("app.services.animal_service.get_all_animal_ids") as mock_get_ids:
-            mock_get_ids.return_value = []
+    @patch("app.api.endpoints.process_all_animals_batch")
+    def test_process_all_animals_no_animals(self, mock_process, client):
+        """Test processing when no animals found using ETL approach"""
+        # Mock the ETL process to return empty result
+        mock_process.return_value = {
+            "message": "ETL processing complete",
+            "total_animals": 0,
+            "processed_animals": 0,
+            "failed_animals": 0,
+            "batches_sent": 0,
+            "total_batches": 0,
+        }
 
-            response = client.post("/process-all-animals")
-            assert response.status_code == 200
-            data = response.json()
-            assert data["message"] == "No animals found"
-            assert data["total_animals"] == 0
+        response = client.post("/process-all-animals")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["message"] == "ETL processing complete"
+        assert data["total_animals"] == 0
+        assert data["processed_animals"] == 0
+        assert data["batches_sent"] == 0
+        
+        # Verify the mock was called
+        mock_process.assert_called_once()

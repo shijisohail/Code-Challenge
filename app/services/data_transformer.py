@@ -1,6 +1,7 @@
 """
 Data transformation service for animal data.
 """
+
 import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional

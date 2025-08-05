@@ -1,6 +1,7 @@
 """
 Tests for service layer utilities.
 """
+
 from unittest.mock import AsyncMock, patch
 
 import aiohttp

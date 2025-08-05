@@ -1,6 +1,7 @@
 """
 HTTP client service with retry logic and error handling.
 """
+
 import asyncio
 import logging
 from typing import Any, Dict, List, Optional, Tuple

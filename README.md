@@ -338,13 +338,46 @@ docker run -p 8000:8000 animal-api
 
 This project demonstrates enterprise-level software engineering practices. Here's how each practice is implemented and where to find it:
 
-### 1. Parallelism and Concurrency
+### 1. ETL (Extract-Transform-Load) Architecture
 
-**Implementation Location**: `utils.py`
+**Implementation Location**: `app/services/animal_service.py`
+
+**How it works**:
+- **True ETL Pipeline**: Follows Extract → Transform → Load → Repeat pattern
+- **Constant Memory Usage**: Processes data in batches of 100 animals maximum
+- **Page-by-Page Processing**: Extracts animal IDs page by page instead of loading all at once
+- **Immediate Processing**: Each batch is transformed and loaded before moving to the next
+
+**ETL Flow**:
+```python
+# app/services/animal_service.py:130-190
+async def process_all_animals_batch(base_url: str):
+    while True:
+        # EXTRACT: Get next page of animal IDs
+        data = await fetch_with_retry(session, f"{base_url}/animals/v1/animals?page={page}")
+        
+        # Process page in batches of MAX_ANIMALS_PER_BATCH (100)
+        for batch_ids in chunk_list(page_animal_ids, config.MAX_ANIMALS_PER_BATCH):
+            # TRANSFORM: Fetch and transform this batch in parallel
+            transformed = await fetch_and_transform_animals_with_session(...)
+            
+            # LOAD: Post the transformed batch immediately
+            await post_batch_with_retry(session, base_url, transformed)
+```
+
+**Benefits**:
+- **Memory Efficient**: Never loads more than 100 animals in memory
+- **Error Isolation**: Failed batches don't affect successful ones
+- **Progress Monitoring**: Real-time visibility into processing status
+- **Fault Tolerant**: Can resume processing from any point
+
+### 2. Parallelism and Concurrency
+
+**Implementation Location**: `app/services/animal_service.py` and `app/services/http_client.py`
 
 **How it works**:
 - **Semaphore-based Concurrency Control**: `asyncio.Semaphore(max_concurrent)` limits concurrent requests
-- **Batch Processing**: Animals are processed in batches of 50 to prevent server overload
+- **ETL Batch Processing**: Animals are processed in ETL batches of 100 to follow proper data pipeline principles
 - **Connection Pooling**: `aiohttp.TCPConnector(limit=50, limit_per_host=20)` optimizes HTTP connections
 - **Async/Await Pattern**: All I/O operations use async/await for non-blocking execution
 
