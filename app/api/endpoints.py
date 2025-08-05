@@ -69,8 +69,8 @@ async def receive_animals(animals: List[Dict[str, Any]]):
     try:
         if len(animals) > config.MAX_ANIMALS_PER_BATCH:
             raise HTTPException(
-                status_code=400, 
-                detail=f"Maximum {config.MAX_ANIMALS_PER_BATCH} animals per batch"
+                status_code=400,
+                detail=f"Maximum {config.MAX_ANIMALS_PER_BATCH} animals per batch",
             )
         logger.info(f"Received batch of {len(animals)} animals")
         for animal in animals:

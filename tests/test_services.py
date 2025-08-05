@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 import aiohttp
 import pytest
 
-from app.services.data_transformer import transform_animal, chunk_list
+from app.services.data_transformer import chunk_list, transform_animal
 from app.services.http_client import fetch_with_retry
 
 

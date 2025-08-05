@@ -68,10 +68,9 @@ async def fetch_with_retry(
     """Fetch URL with retry logic for handling various error conditions."""
     if max_retries is None:
         max_retries = config.MAX_RETRIES
-        
+
     timeout = aiohttp.ClientTimeout(
-        total=config.REQUEST_TIMEOUT, 
-        connect=config.CONNECT_TIMEOUT
+        total=config.REQUEST_TIMEOUT, connect=config.CONNECT_TIMEOUT
     )
 
     for attempt in range(max_retries):
@@ -110,7 +109,7 @@ async def post_batch_with_retry(
     """Post animal batch with retry logic."""
     if max_retries is None:
         max_retries = config.MAX_RETRIES
-        
+
     url = f"{base_url}/animals/v1/home"
 
     for attempt in range(max_retries):

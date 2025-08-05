@@ -43,7 +43,7 @@ async def fetch_and_transform_animals(
     """Fetch and transform animals concurrently."""
     if max_concurrent is None:
         max_concurrent = config.MAX_CONCURRENT_REQUESTS
-        
+
     semaphore = asyncio.Semaphore(max_concurrent)
     transformed_animals = []
     failed_animals = []

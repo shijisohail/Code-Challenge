@@ -2,8 +2,8 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI
 
-from app.core.config import config
 from app.api import endpoints
+from app.core.config import config
 
 app = FastAPI(
     title=config.APP_TITLE,
