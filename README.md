@@ -1,6 +1,6 @@
 # ETL Animal API
 
-A comprehensive FastAPI application designed to process and manage animal data with robust error handling, concurrency support, and production-ready features. This application serves as both a proxy API for external animal services and a data processing pipeline with transformation capabilities.
+A comprehensive FastAPI application designed to process and manage animal data with robust error handling, concurrency support, and production-ready features. This application follows a modular architecture with a proper service layer and implements true ETL (Extract-Transform-Load) principles for processing animal data in batches.
 
 ## Quick Start
 
@@ -329,6 +329,22 @@ open htmlcov/index.html
 - **Error Handling**: Prevents information leakage in error responses
 - **Security Scanning**: Bandit integration for vulnerability detection
 - **Dependency Management**: Regular security updates
+
+## Docker Image Download and Setup
+
+### Instructions
+
+1. **Download Docker Image**: [Download the Docker image](https://storage.googleapis.com/lp-dev-hiring/images/lp-programming-challenge-1-1625758668.tar.gz).
+2. **Load the Image**: Load the container with the following command:
+   ```bash
+   docker load -i lp-programming-challenge-1-1625758668.tar.gz
+   ```
+   The output will display what has been imported.
+3. **Run the Container**: Expose port 3123 to access it:
+   ```bash
+   docker run --rm -p 3123:3123 -ti lp-programming-challenge-1
+   ```
+4. **Check the Server**: Open [http://localhost:3123/](http://localhost:3123/) in your browser to verify it is working.
 
 ## Deployment
 
