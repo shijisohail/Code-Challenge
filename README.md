@@ -375,12 +375,12 @@ async def process_all_animals_batch(base_url: str):
     while True:
         # EXTRACT: Get next page of animal IDs
         data = await fetch_with_retry(session, f"{base_url}/animals/v1/animals?page={page}")
-        
+
         # Process page in batches of MAX_ANIMALS_PER_BATCH (100)
         for batch_ids in chunk_list(page_animal_ids, config.MAX_ANIMALS_PER_BATCH):
             # TRANSFORM: Fetch and transform this batch in parallel
             transformed = await fetch_and_transform_animals_with_session(...)
-            
+
             # LOAD: Post the transformed batch immediately
             await post_batch_with_retry(session, base_url, transformed)
 ```
