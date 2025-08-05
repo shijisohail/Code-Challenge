@@ -40,7 +40,6 @@ class TestFullETLWorkflow:
             with patch(
                 "app.services.animal_service.post_batch_with_retry"
             ) as mock_post_batch:
-
                 mock_fetch_transform.return_value = mock_transformed_animals
                 mock_post_batch.return_value = True
 
@@ -73,7 +72,6 @@ class TestFullETLWorkflow:
         with patch(
             "app.services.animal_service.fetch_and_transform_animals_with_session"
         ) as mock_fetch_transform:
-
             # Mock no transformed animals (all failed)
             mock_fetch_transform.return_value = []
 
@@ -104,7 +102,6 @@ class TestFullETLWorkflow:
             with patch(
                 "app.services.animal_service.post_batch_with_retry"
             ) as mock_post_batch:
-
                 mock_fetch_transform.return_value = mock_transformed_animals
                 mock_post_batch.return_value = False  # Post failed
 
@@ -134,7 +131,6 @@ class TestFullETLWorkflow:
             with patch(
                 "app.services.animal_service.transform_animal"
             ) as mock_transform:
-
                 # Setup fetch responses
                 mock_fetch.side_effect = [mock_animal_1, mock_animal_2]
 
@@ -170,7 +166,6 @@ class TestFullETLWorkflow:
             with patch(
                 "app.services.animal_service.transform_animal"
             ) as mock_transform:
-
                 # Setup fetch responses - one success, one failure, one success
                 mock_animal_1 = {"id": 1, "name": "Fluffy", "type": "cat"}
                 mock_animal_3 = {"id": 3, "name": "Whiskers", "type": "cat"}
@@ -202,7 +197,8 @@ class TestETLConcurrencyAndParallelism:
 
     @pytest.mark.asyncio
     async def test_concurrent_batch_processing_simulation(self):
-        """Test that multiple batches can be processed with proper concurrency control"""
+        """Test that multiple batches can be processed with proper
+        concurrency control"""
 
         # This test simulates concurrent processing behavior
         base_url = "http://localhost:3123"
@@ -223,7 +219,6 @@ class TestETLConcurrencyAndParallelism:
                 with patch(
                     "app.services.animal_service.transform_animal"
                 ) as mock_transform:
-
                     # Setup successful responses
                     mock_fetch.return_value = {"id": 1, "name": "Test", "type": "cat"}
                     mock_transform.return_value = {
@@ -277,7 +272,6 @@ class TestETLConcurrencyAndParallelism:
             with patch(
                 "app.services.animal_service.transform_animal"
             ) as mock_transform:
-
                 mock_transform.return_value = {"id": 1, "name": "Test", "type": "cat"}
 
                 start_time = asyncio.get_event_loop().time()

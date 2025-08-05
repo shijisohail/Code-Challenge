@@ -51,17 +51,37 @@ make health
 
 ```
 Code-Challenge/
-├── main.py                    # FastAPI application with API endpoints
-├── utils.py                   # Utility functions for data processing and HTTP operations
-├── run_server.py              # Server startup script
-├── test_file.py               # Comprehensive test suite
-├── requirements.txt           # Production dependencies
-├── pyproject.toml             # Project configuration and development tools
-├── Makefile                   # Development automation commands
-├── .flake8                    # Flake8 linting configuration
-├── .pre-commit-config.yaml    # Pre-commit hooks configuration
-├── .gitignore                 # Git ignore patterns
-└── .github/workflows/ci.yml   # GitHub Actions CI/CD pipeline
+├── main.py                      # FastAPI application with API endpoints
+├── app/                         # Modular application structure
+│   ├── __init__.py             # Package initialization
+│   ├── api/                    # API layer
+│   │   ├── __init__.py
+│   │   └── endpoints.py        # FastAPI endpoint definitions
+│   ├── core/                   # Core configuration
+│   │   ├── __init__.py
+│   │   └── config.py           # Environment-based configuration
+│   └── services/               # Business logic services
+│       ├── __init__.py
+│       ├── animal_service.py   # ETL processing service
+│       ├── data_transformer.py # Data transformation utilities
+│       └── http_client.py      # HTTP client with retry logic
+├── run_server.py               # Server startup script
+├── test_file.py                # Legacy comprehensive test suite
+├── tests/                      # Modern test structure
+│   ├── __init__.py
+│   ├── unit/                   # Unit tests
+│   ├── integration/            # Integration tests
+│   └── etl/                    # ETL-specific tests
+├── requirements.txt            # Production dependencies
+├── pyproject.toml              # Project configuration and development tools
+├── Makefile                    # Development automation commands
+├── Dockerfile                  # Production Docker image
+├── Dockerfile.dev              # Development Docker image
+├── docker-compose.yml          # Docker Compose configuration
+├── .flake8                     # Flake8 linting configuration
+├── .pre-commit-config.yaml     # Pre-commit hooks configuration
+├── .gitignore                  # Git ignore patterns
+└── .github/workflows/ci.yml    # GitHub Actions CI/CD pipeline
 ```
 
 ### Detailed File Descriptions

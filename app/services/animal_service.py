@@ -156,10 +156,6 @@ async def process_batch_etl(
         }
 
 
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
-
-
 async def process_all_animals_batch(base_url: str) -> Dict[str, Any]:
     """Process all animals following ETL principles:
     Extract batches - Transform - Load - repeat.
@@ -213,7 +209,7 @@ async def process_all_animals_batch(base_url: str) -> Dict[str, Any]:
                     total_failed += (
                         config.MAX_ANIMALS_PER_BATCH
                     )  # Assume full batch failed
-                else:
+                elif isinstance(result, dict):
                     total_processed += result["processed"]
                     total_failed += result["failed"]
 
