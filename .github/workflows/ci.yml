@@ -97,6 +97,8 @@ jobs:
             type=ref,event=pr
             type=sha,prefix=${{ github.run_number }}-
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+          flavor: |
+            latest=auto
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -148,4 +150,3 @@ jobs:
           echo "🚀 Deploying Animal API version ${{ github.sha }}"
           echo "Docker image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
           echo "Available at: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
-          
