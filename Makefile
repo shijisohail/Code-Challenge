@@ -1,4 +1,4 @@
-.PHONY: help install install-dev format lint test test-cov clean run health pre-commit setup-dev ci
+.PHONY: help install install-dev format lint test test-cov clean run health pre-commit setup-dev ci docker-build docker-run docker-dev docker-stop docker-clean docker-logs
 
 # Default target
 help:
@@ -15,11 +15,24 @@ help:
 	@echo "  health       - Check application health"
 	@echo "  clean        - Clean up generated files"
 	@echo "  pre-commit   - Install pre-commit hooks"
+	@echo ""
+	@echo "Docker commands:"
+	@echo "  docker-build - Build Docker image"
+	@echo "  docker-run   - Run application in Docker (production)"
+	@echo "  docker-dev   - Run application in Docker (development)"
+	@echo "  docker-stop  - Stop all Docker containers"
+	@echo "  docker-clean - Clean up Docker resources"
+	@echo "  docker-logs  - View Docker container logs"
 
 # Installation
 install:
 	pip install -r requirements.txt
 
+install-dev:
+	@echo "📦 Installing development dependencies..."
+	pip install -r requirements.txt
+	pip install -e .[dev] || echo "Warning: Optional dev dependencies not available"
+	@echo "✅ Development dependencies installed!"
 
 setup-dev: install-dev pre-commit
 	@echo "Development environment setup complete!"
@@ -88,3 +101,44 @@ pre-commit:
 	@echo "🔧 Installing pre-commit hooks..."
 	pre-commit install
 	@echo "✅ Pre-commit hooks installed!"
+
+# Docker commands
+docker-build:
+	@echo "🐳 Building Docker image..."
+	docker build -t animal-api:latest .
+	@echo "✅ Docker image built successfully!"
+
+docker-run:
+	@echo "🐳 Running application in Docker (production)..."
+	docker-compose up -d animal-api
+	@echo "✅ Application running at http://localhost:8000"
+	@echo "🏥 Health check: make docker-health"
+
+docker-dev:
+	@echo "🐳 Running application in Docker (development)..."
+	docker-compose --profile dev up -d animal-api-dev
+	@echo "✅ Development server running at http://localhost:8000"
+	@echo "🔄 Hot reloading enabled"
+
+docker-stop:
+	@echo "🛑 Stopping Docker containers..."
+	docker-compose down
+	@echo "✅ Containers stopped!"
+
+docker-clean:
+	@echo "🧹 Cleaning up Docker resources..."
+	docker-compose down -v --rmi local
+	docker system prune -f
+	@echo "✅ Docker cleanup complete!"
+
+docker-logs:
+	@echo "📋 Viewing Docker container logs..."
+	docker-compose logs -f animal-api
+
+docker-health:
+	@echo "🏥 Checking Docker container health..."
+	docker-compose exec animal-api curl -f http://localhost:8000/health || echo "❌ Health check failed"
+
+docker-shell:
+	@echo "🐚 Opening shell in Docker container..."
+	docker-compose exec animal-api /bin/bash
