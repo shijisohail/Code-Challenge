@@ -16,6 +16,8 @@ def _transform_friends(friends: Any) -> List[str]:
 
     if isinstance(friends, str):
         return [friend.strip() for friend in friends.split(",") if friend.strip()]
+    elif isinstance(friends, list):
+        return [str(friend).strip() for friend in friends if str(friend).strip()]
     return []
 
 
@@ -24,14 +26,19 @@ def _parse_datetime_string(born_at: str) -> Optional[str]:
     formats = [
         "%Y-%m-%d",
         "%Y-%m-%d %H:%M:%S",
+        "%Y/%m/%d %H:%M:%S",
+        "%m-%d-%Y %H:%M:%S",  # MM-dd-yyyy format
         "%Y-%m-%dT%H:%M:%S",
         "%Y-%m-%dT%H:%M:%SZ",
+        "%Y-%m-%dT%H:%M:%S%z",
+        "%Y-%m-%dT%H:%M:%S+00:00",
     ]
 
     for fmt in formats:
         try:
             dt = datetime.strptime(born_at, fmt)
-            return dt.isoformat() + "Z"
+            # Convert to UTC and return with +00:00 timezone
+            return dt.isoformat().replace("+00:00", "") + "+00:00"
         except ValueError:
             continue
 
@@ -47,13 +54,14 @@ def _transform_born_at(born_at: Any) -> Optional[str]:
     try:
         if isinstance(born_at, (int, float)):
             dt = datetime.utcfromtimestamp(born_at / 1000.0)
-            return dt.isoformat() + "Z"
+            return dt.isoformat() + "+00:00"
         elif isinstance(born_at, str):
-            return _parse_datetime_string(born_at)
+            parsed = _parse_datetime_string(born_at)
+            return parsed if parsed is not None else born_at
     except Exception as e:
         logger.warning(f"Error transforming born_at: {e}")
 
-    return None
+    return born_at
 
 
 def transform_animal(animal: Dict[str, Any]) -> Dict[str, Any]:

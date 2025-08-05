@@ -3,6 +3,7 @@ Application configuration settings.
 """
 
 import logging
+import os
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -14,7 +15,7 @@ class Config:
     """Application configuration."""
 
     # API Configuration
-    ANIMALS_API_BASE_URL = "http://localhost:3123"
+    ANIMALS_API_BASE_URL = os.getenv("ANIMALS_API_BASE_URL", "http://localhost:3123")
 
     # Application metadata
     APP_TITLE = "Animal API"

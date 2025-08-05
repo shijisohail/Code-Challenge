@@ -156,22 +156,24 @@ async def process_batch_etl(
         }
 
 
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+
+
 async def process_all_animals_batch(base_url: str) -> Dict[str, Any]:
     """Process all animals following ETL principles:
-    Extract batches -> Transform -> Load -> repeat.
+    Extract batches - Transform - Load - repeat.
+    Parallelize processing using concurrent tasks.
     """
     logger.info("Starting ETL processing of all animals")
 
-    # Statistics tracking
     total_animals = 0
     total_processed = 0
     total_failed = 0
     batches_sent = 0
-    batch_number = 0
+    batch_number = 1
 
-    async with aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(limit=50, limit_per_host=20)
-    ) as session:
+    async with aiohttp.ClientSession() as session:
         page = 1
 
         while True:
@@ -195,28 +197,31 @@ async def process_all_animals_batch(base_url: str) -> Dict[str, Any]:
             # Process page data in ETL batches of MAX_ANIMALS_PER_BATCH
             batches = chunk_list(page_animal_ids, config.MAX_ANIMALS_PER_BATCH)
 
-            for batch_ids in batches:
-                batch_number += 1
+            # Create concurrent tasks for batch processing
+            tasks = [
+                process_batch_etl(base_url, batch_ids, batch_number + i, session)
+                for i, batch_ids in enumerate(batches)
+            ]
 
-                # Process this batch: Extract (already done) -> Transform -> Load
-                batch_result = await process_batch_etl(
-                    base_url, batch_ids, batch_number, session
-                )
+            # Execute all batch processing tasks concurrently
+            results = await asyncio.gather(*tasks, return_exceptions=True)
 
-                # Update statistics
-                total_processed += batch_result["processed"]
-                total_failed += batch_result["failed"]
+            # Process results
+            for result in results:
+                if isinstance(result, Exception):
+                    logger.error(f"Exception in batch processing: {result}")
+                    total_failed += (
+                        config.MAX_ANIMALS_PER_BATCH
+                    )  # Assume full batch failed
+                else:
+                    total_processed += result["processed"]
+                    total_failed += result["failed"]
 
-                if batch_result["success"]:
-                    batches_sent += 1
+                    if result["success"]:
+                        batches_sent += 1
 
-                # Small delay between batches to be server-friendly
-                await asyncio.sleep(0.5)
-
+            batch_number += len(batches)
             page += 1
-
-            # Small delay between pages
-            await asyncio.sleep(0.2)
 
     logger.info(
         f"ETL processing complete: {total_processed} processed, "
@@ -229,5 +234,5 @@ async def process_all_animals_batch(base_url: str) -> Dict[str, Any]:
         "processed_animals": total_processed,
         "failed_animals": total_failed,
         "batches_sent": batches_sent,
-        "total_batches": batch_number,
+        "total_batches": batch_number - 1,
     }

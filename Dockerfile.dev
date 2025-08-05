@@ -1,0 +1,50 @@
+# Development Dockerfile with hot reloading
+FROM python:3.11-slim as development
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONPATH="/app"
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    curl \
+    git \Start by downloading the Docker image:
+https://storage.googleapis.com/lp-dev-hiring/images/lp-programming-challenge-1
+-1625758668.tar.gz
+2.​ Load the container: docker load -i
+lp-programming-challenge-1-1625610904.tar.gz.
+3.​ The output there should tell you what it imported. Go ahead and run it, and be
+sure to expose port 3123 so you can access it: docker run --rm -p 3123:3123
+-ti lp-programming-challenge-1
+4.​ Try opening http://localhost:3123/ to see if things are working.
+    && rm -rf /var/lib/apt/lists/*
+
+# Set work directory
+WORKDIR /app
+
+# Copy requirements first for better Docker layer caching
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Create non-root user for security
+RUN groupadd -r appuser && useradd -r -g appuser appuser && \
+    chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Run the application with hot reloading for development
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--log-level", "info"]
