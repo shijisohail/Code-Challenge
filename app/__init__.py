@@ -1,0 +1,3 @@
+"""
+Animal API application package.
+"""
