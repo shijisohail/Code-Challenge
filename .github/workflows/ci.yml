@@ -87,11 +87,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set lowercase image name
+        id: image
+        run: |
+          IMAGE_NAME_LOWER=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+          echo "name=${IMAGE_NAME_LOWER}" >> $GITHUB_OUTPUT
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -113,8 +119,7 @@ jobs:
 
       - name: Test Docker image
         run: |
-          IMAGE_NAME_LOWER=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
-          docker run --rm --name test-container -d -p 8000:8000 ${{ env.REGISTRY }}/${IMAGE_NAME_LOWER}:latest
+          docker run --rm --name test-container -d -p 8000:8000 ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest
           sleep 10
           curl -f http://localhost:8000/health || exit 1
           docker stop test-container
