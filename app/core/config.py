@@ -23,7 +23,7 @@ class Config:
     APP_VERSION = "1.0.0"
 
     # Processing settings
-    MAX_CONCURRENT_REQUESTS = 10
+    MAX_CONCURRENT_REQUESTS = 100
     BATCH_SIZE = 100
     MAX_ANIMALS_PER_BATCH = 100
 
