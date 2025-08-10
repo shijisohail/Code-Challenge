@@ -54,7 +54,7 @@ class TestFullETLWorkflow:
 
                 # Verify calls were made
                 mock_fetch_transform.assert_called_once_with(
-                    mock_session, base_url, animal_ids, max_concurrent=10
+                    mock_session, base_url, animal_ids, max_concurrent=100
                 )
                 mock_post_batch.assert_called_once_with(
                     mock_session, base_url, mock_transformed_animals
@@ -197,9 +197,10 @@ class TestETLConcurrencyAndParallelism:
 
     @pytest.mark.asyncio
     async def test_concurrent_batch_processing_simulation(self):
-        """Test that multiple batches can be processed with proper
-        concurrency control"""
+        """Test that multiple batches can be processed with proper concurrency control.
 
+        This test simulates concurrent processing behavior.
+        """
         # This test simulates concurrent processing behavior
         base_url = "http://localhost:3123"
 
@@ -249,8 +250,7 @@ class TestETLConcurrencyAndParallelism:
 
     @pytest.mark.asyncio
     async def test_semaphore_concurrency_control(self):
-        """Test that semaphore properly controls concurrent requests"""
-
+        """Test that semaphore properly controls concurrent requests."""
         base_url = "http://localhost:3123"
         animal_ids = list(range(1, 21))  # 20 animals
         mock_session = MagicMock()
